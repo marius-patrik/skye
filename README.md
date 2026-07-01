@@ -58,6 +58,8 @@ bun .\scripts\skyagent.ts item-networth --section armor
 bun .\scripts\skyagent.ts accessories
 bun .\scripts\skyagent.ts missing-accessories
 bun .\scripts\skyagent.ts accessory-upgrades --budget 10000000
+bun .\scripts\skyagent.ts section skills
+bun .\scripts\skyagent.ts progression
 bun .\scripts\skyagent.ts item HYPERION
 bun .\scripts\skyagent.ts price ENCHANTED_DIAMOND
 bun .\scripts\skyagent.ts lbin HYPERION
@@ -100,6 +102,8 @@ Price results use Hypixel Bazaar for Bazaar products and CoflNet-compatible endp
 Networth results combine purse, bank, and sectioned inventory item totals. Items without resolved prices are reported under `unknownPrices` and do not contribute to totals; partial auction candidates remain advisory. Current networth behavior is intentionally conservative: item modifiers and cosmetic/value add-ons are preserved in output but not independently valued until provider-specific support lands.
 
 Accessory results inspect the accessory bag, estimate Magical Power, detect duplicates and recombobulation/enrichment signals, and rank missing-accessory upgrades by coin per Magical Power when accessory metadata and resolved prices are available. Missing-accessory coverage depends on the configured accessory metadata provider and is explicit when the full universe is unavailable.
+
+Progression results provide a shared section framework for skills, Dungeons, Slayer, collections, and currencies. Outputs include source fields used, computed XP levels, warnings, formula provenance, and static table metadata so later section modules can share lookup and formatting logic.
 
 See `docs/parity.md` for the current gap between SkyAgent and SkyCrypt/SkyHelper-style tools, `docs/parity-spec.md` for the detailed missing-parity implementation spec, and `docs/networth-comparison.md` for networth comparison-smoke notes.
 

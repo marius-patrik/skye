@@ -8,6 +8,7 @@ import { itemMetadata, normalizedItemsForPlayer } from "@skyagent/core/items";
 import { itemNetworthForPlayer, networthForPlayer } from "@skyagent/core/networth";
 import { coflnetPriceHistory, itemPrice, lowestBin } from "@skyagent/core/prices";
 import { compactProfileOverview, fetchProfileContext, profileSummaries, skycryptUrl } from "@skyagent/core/profile";
+import { profileSectionForPlayer, progressionForPlayer } from "@skyagent/core/sections";
 
 function print(value, pretty = true) {
   process.stdout.write(`${JSON.stringify(value, null, pretty ? 2 : 0)}\n`);
@@ -40,6 +41,8 @@ Usage:
   skyagent accessories [nameOrUuid] [profileIdOrName]
   skyagent missing-accessories [nameOrUuid] [profileIdOrName]
   skyagent accessory-upgrades [nameOrUuid] [profileIdOrName] --budget <coins>
+  skyagent section <name> [nameOrUuid] [profileIdOrName]
+  skyagent progression [nameOrUuid] [profileIdOrName]
   skyagent item <internalId>
   skyagent price <itemId>
   skyagent lbin <itemId>
@@ -320,6 +323,20 @@ export async function command(args) {
       throw new Error("Usage: skyagent accessory-upgrades [nameOrUuid] [profileIdOrName] --budget <coins>");
     }
     print(await accessoryUpgradesForPlayer(parsed.values[0], parsed.values[1], parsed.budget));
+    return;
+  }
+
+  if (area === "section") {
+    if (!action) {
+      throw new Error("Usage: skyagent section <name> [nameOrUuid] [profileIdOrName]");
+    }
+    print(await profileSectionForPlayer(action, rest[0], rest[1]));
+    return;
+  }
+
+  if (area === "progression") {
+    const values = withoutFlags([action, ...rest].filter(Boolean));
+    print(await progressionForPlayer(values[0], values[1]));
     return;
   }
 
