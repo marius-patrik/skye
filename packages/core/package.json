@@ -11,7 +11,9 @@
     "./nbt": "./src/nbt.ts",
     "./networth": "./src/networth.ts",
     "./prices": "./src/prices.ts",
+    "./progression": "./src/progression.ts",
     "./profile": "./src/profile.ts",
+    "./sections": "./src/sections/index.ts",
     "./store": "./src/store.ts"
   },
   "dependencies": {

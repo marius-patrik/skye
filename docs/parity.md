@@ -15,6 +15,7 @@ For the detailed implementation spec and future issue slices, see `docs/parity-s
 - Local config and memory storage outside the repo.
 - Conservative sectioned networth for purse, bank, and resolved direct item prices, with unknown prices and assumptions surfaced.
 - Accessory bag analysis with duplicate detection, recombobulation/enrichment signals, estimated Magical Power, missing accessories when metadata is available, and price-driven coin-per-MP upgrade ranking.
+- Shared progression section framework with skill, Catacombs, Slayer XP curves, basic skills/Dungeons/Slayer/collections/currency summaries, source fields, warnings, and provenance.
 
 ## Missing for SkyCrypt-Style Parity
 
@@ -23,8 +24,7 @@ For the detailed implementation spec and future issue slices, see `docs/parity-s
 - Armor, equipment, weapons, wardrobe, inventory, ender chest, backpack, vault, and accessory bag section views.
 - SkyCrypt/SkyHelper-grade networth calculation, including modifier, pet-level, skin, dye, museum, and miscellaneous valuables.
 - SkyHelper-grade missing accessories when a full maintained accessory universe is unavailable.
-- Skill level calculation from XP tables.
-- Dungeons, Slayer, Bestiary, Mining/HotM, Farming/Garden, Trophy Fishing, Crimson Isle, Rift, Kuudra, and Collections section renderers.
+- Full profile-viewer section depth for Dungeons, Slayer, Bestiary, Mining/HotM, Farming/Garden, Trophy Fishing, Crimson Isle, Rift, Kuudra, and Collections.
 - Weight calculations such as Senither/Lily-style weight.
 - Historical price sources and full lowest-BIN search beyond bounded auction-page scans.
 

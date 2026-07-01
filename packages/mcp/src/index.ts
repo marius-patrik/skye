@@ -8,6 +8,7 @@ import { itemMetadata, normalizedItemsForPlayer } from "@skyagent/core/items";
 import { itemNetworthForPlayer, networthForPlayer } from "@skyagent/core/networth";
 import { coflnetPriceHistory, itemPrice, lowestBin } from "@skyagent/core/prices";
 import { compactProfileOverview, fetchProfileContext, profileSummaries, skycryptUrl } from "@skyagent/core/profile";
+import { profileSectionForPlayer, progressionForPlayer } from "@skyagent/core/sections";
 
 const tools = [
   {
@@ -240,6 +241,32 @@ const tools = [
         player: { type: "string" },
         profile: { type: "string" },
         budget: { type: "number" },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "skyblock_profile_section",
+    description: "Render one structured progression section such as skills, dungeons, slayer, collections, or currencies. Requires API key.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        section: { type: "string" },
+        player: { type: "string" },
+        profile: { type: "string" },
+      },
+      required: ["section"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "skyblock_progression",
+    description: "Render the shared profile progression framework sections with XP calculations, warnings, and provenance. Requires API key.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        player: { type: "string" },
+        profile: { type: "string" },
       },
       additionalProperties: false,
     },
@@ -494,6 +521,10 @@ async function callTool(name: string, args: Record<string, any> = {}) {
         throw new Error("budget must be a non-negative finite number when provided.");
       }
       return accessoryUpgradesForPlayer(args.player, args.profile, args.budget ?? null);
+    case "skyblock_profile_section":
+      return profileSectionForPlayer(args.section, args.player, args.profile);
+    case "skyblock_progression":
+      return progressionForPlayer(args.player, args.profile);
     case "skyblock_item_metadata":
       return itemMetadata(args.internalId);
     case "skyblock_price":
