@@ -3,6 +3,7 @@
 import { addMemory, deleteMemory, publicConfig, readMemories, setConfigValue } from "@skyagent/core/store";
 import { configuredProfileId, hypixelRequest, resolveMinecraftUsername, resourceEndpoint, skyblockProfiles, uuidFromNameOrUuid } from "@skyagent/core/hypixel";
 import { inventoryForPlayer, inventorySectionForPlayer } from "@skyagent/core/inventory";
+import { itemMetadata, normalizedItemsForPlayer } from "@skyagent/core/items";
 import { compactProfileOverview, fetchProfileContext, profileSummaries, skycryptUrl } from "@skyagent/core/profile";
 
 const tools = [
@@ -162,6 +163,30 @@ const tools = [
         debugRaw: { type: "boolean" },
       },
       required: ["section"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "skyblock_normalized_items",
+    description: "Decode inventory item stacks and normalize them into stable SkyBlock item records enriched by NEU-style metadata where available. Requires API key.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        player: { type: "string" },
+        profile: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "skyblock_item_metadata",
+    description: "Fetch NotEnoughUpdates-style metadata for a SkyBlock internal item ID.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        internalId: { type: "string" },
+      },
+      required: ["internalId"],
       additionalProperties: false,
     },
   },
@@ -355,6 +380,10 @@ async function callTool(name: string, args: Record<string, any> = {}) {
         warnings: result.warnings,
       };
     }
+    case "skyblock_normalized_items":
+      return normalizedItemsForPlayer(args.player, args.profile);
+    case "skyblock_item_metadata":
+      return itemMetadata(args.internalId);
     case "skycrypt_profile_url":
       return { url: skycryptUrl(args.player, args.profileName) };
     case "skyblock_profile":

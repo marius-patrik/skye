@@ -6,6 +6,7 @@
     ".": "./src/index.ts",
     "./hypixel": "./src/hypixel.ts",
     "./inventory": "./src/inventory.ts",
+    "./items": "./src/items.ts",
     "./nbt": "./src/nbt.ts",
     "./profile": "./src/profile.ts",
     "./store": "./src/store.ts"

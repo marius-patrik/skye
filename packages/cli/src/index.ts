@@ -3,6 +3,7 @@
 import { addMemory, configPath, deleteMemory, publicConfig, readMemories, setConfigValue } from "@skyagent/core/store";
 import { configuredProfileId, hypixelRequest, resolveMinecraftUsername, resourceEndpoint, skyblockProfiles, uuidFromNameOrUuid } from "@skyagent/core/hypixel";
 import { inventoryForPlayer, inventorySectionForPlayer } from "@skyagent/core/inventory";
+import { itemMetadata, normalizedItemsForPlayer } from "@skyagent/core/items";
 import { compactProfileOverview, fetchProfileContext, profileSummaries, skycryptUrl } from "@skyagent/core/profile";
 
 function print(value, pretty = true) {
@@ -30,6 +31,8 @@ Usage:
   skyagent inventory [nameOrUuid] [profileIdOrName] [--debug-raw]
   skyagent inventory-section <section> [nameOrUuid] [profileIdOrName] [--debug-raw]
   skyagent item-dump [nameOrUuid] [profileIdOrName] --section <section> [--debug-raw]
+  skyagent normalize-items [nameOrUuid] [profileIdOrName]
+  skyagent item <internalId>
   skyagent skycrypt [nameOrUuid] [profileName]
   skyagent museum [profileId]
   skyagent garden [profileId]
@@ -247,6 +250,20 @@ export async function command(args) {
       items: result.items,
       warnings: result.warnings,
     });
+    return;
+  }
+
+  if (area === "normalize-items") {
+    const values = withoutFlags([action, ...rest].filter(Boolean));
+    print(await normalizedItemsForPlayer(values[0], values[1]));
+    return;
+  }
+
+  if (area === "item") {
+    if (!action) {
+      throw new Error("Usage: skyagent item <internalId>");
+    }
+    print(await itemMetadata(action));
     return;
   }
 
