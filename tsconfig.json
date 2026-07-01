@@ -25,6 +25,9 @@
       "@skyagent/gateway": [
         "packages/gateway/src/index.ts"
       ],
+      "@skyagent/gateway/manager": [
+        "packages/gateway/src/manager.ts"
+      ],
       "@skyagent/mcp": [
         "packages/mcp/src/index.ts"
       ],
