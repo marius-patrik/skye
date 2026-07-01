@@ -52,9 +52,9 @@ fi
 
 DIFF_FILE="$(mktemp)"
 PROMPT_FILE="$(mktemp)"
-git diff --stat "${BASE_REF}...HEAD" > "${DIFF_FILE}"
+git diff --stat "${BASE_REF}...HEAD" -- . ':!packages/web/dist/**' > "${DIFF_FILE}"
 printf '\n--- FULL DIFF ---\n' >> "${DIFF_FILE}"
-git diff --find-renames "${BASE_REF}...HEAD" >> "${DIFF_FILE}"
+git diff --find-renames "${BASE_REF}...HEAD" -- . ':!packages/web/dist/**' >> "${DIFF_FILE}"
 
 cat > "${PROMPT_FILE}" <<EOF
 You are reviewing a pull request for the SkyAgent repository.
