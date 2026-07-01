@@ -64,7 +64,6 @@ EOF
 if ! codex exec \
   --cd /workspace \
   --sandbox read-only \
-  --ask-for-approval never \
   --ephemeral \
   --output-schema "${SCHEMA_PATH}" \
   --output-last-message "${REVIEW_OUTPUT}" \
