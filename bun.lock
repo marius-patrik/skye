@@ -7,6 +7,7 @@
       "dependencies": {
         "@skyagent/cli": "workspace:*",
         "@skyagent/core": "workspace:*",
+        "@skyagent/gateway": "workspace:*",
         "@skyagent/mcp": "workspace:*",
         "@skyagent/tui": "workspace:*",
       },
@@ -32,6 +33,13 @@
       "version": "0.1.0",
       "dependencies": {
         "prismarine-nbt": "^2.8.0",
+      },
+    },
+    "packages/gateway": {
+      "name": "@skyagent/gateway",
+      "version": "0.1.0",
+      "dependencies": {
+        "@skyagent/core": "workspace:*",
       },
     },
     "packages/mcp": {
@@ -134,6 +142,8 @@
     "@skyagent/cli": ["@skyagent/cli@workspace:packages/cli"],
 
     "@skyagent/core": ["@skyagent/core@workspace:packages/core"],
+
+    "@skyagent/gateway": ["@skyagent/gateway@workspace:packages/gateway"],
 
     "@skyagent/mcp": ["@skyagent/mcp@workspace:packages/mcp"],
 

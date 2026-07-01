@@ -25,6 +25,7 @@
   "dependencies": {
     "@skyagent/cli": "workspace:*",
     "@skyagent/core": "workspace:*",
+    "@skyagent/gateway": "workspace:*",
     "@skyagent/mcp": "workspace:*",
     "@skyagent/tui": "workspace:*"
   },
