@@ -5,6 +5,7 @@ REVIEW_OUTPUT="${REVIEW_OUTPUT:-codex-review.json}"
 BASE_REF="${BASE_REF:-origin/main}"
 CODEX_HOME="${CODEX_HOME:-/tmp/codex-home}"
 SCHEMA_PATH="${SCHEMA_PATH:-/opt/codex-review/schema.json}"
+REVIEW_CONTEXT_DIR="${REVIEW_CONTEXT_DIR:-/review-context}"
 PR_TITLE="${PR_TITLE:-}"
 PR_BODY="${PR_BODY:-}"
 CODEX_REVIEW_MODEL="${CODEX_REVIEW_MODEL:-gpt-5.5}"
@@ -34,6 +35,21 @@ fi
 git config --global --add safe.directory /workspace
 git fetch origin main
 
+AGENTS_CONTEXT="${REVIEW_CONTEXT_DIR}/AGENTS.md"
+ISSUE_CONTEXT="${REVIEW_CONTEXT_DIR}/linked-issues.md"
+if [ ! -s "${AGENTS_CONTEXT}" ]; then
+  write_blocked_review \
+    "Codex autoreview could not run because repository rule context is missing." \
+    "Prepare and mount ${AGENTS_CONTEXT} before running the Codex review container."
+  exit 0
+fi
+if [ ! -s "${ISSUE_CONTEXT}" ]; then
+  write_blocked_review \
+    "Codex autoreview could not run because linked issue context is missing." \
+    "Prepare and mount ${ISSUE_CONTEXT} before running the Codex review container."
+  exit 0
+fi
+
 DIFF_FILE="$(mktemp)"
 PROMPT_FILE="$(mktemp)"
 git diff --stat "${BASE_REF}...HEAD" > "${DIFF_FILE}"
@@ -59,6 +75,12 @@ ${PR_TITLE}
 
 PR body:
 ${PR_BODY}
+
+Repository rules from .agents/AGENTS.md:
+$(cat "${AGENTS_CONTEXT}")
+
+Linked issue/spec context:
+$(cat "${ISSUE_CONTEXT}")
 
 $(cat "${DIFF_FILE}")
 EOF
