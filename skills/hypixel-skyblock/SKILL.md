@@ -27,7 +27,7 @@ Use this skill when the user asks for Hypixel SkyBlock profile analysis, progres
 ## Subskill Routing
 
 - Use `$skyagent-profile-api` for player resolution, profile selection, overview, member payloads, museum, garden, bingo, or raw Hypixel endpoints.
-- Use `$skyagent-inventory-items` for inventory sections, item dumps, normalized items, NBT state, item metadata, or modifier reasoning.
+- Use `$skyagent-inventory-items` for inventory sections, armor, equipment, wardrobe, backpacks, accessory bag item dumps, normalized item records, NBT state, item metadata, or modifier reasoning.
 - Use `$skyagent-economy` for prices, Bazaar, auctions, LBIN, price history, networth, provider confidence, or market uncertainty.
 - Use `$skyagent-accessories` for Magical Power, accessory bag state, missing accessories, duplicates, enrichment, recombobulation, or budgeted MP upgrades.
 - Use `$skyagent-progression` for profile sections, XP curves, skills, Dungeons, Slayer, Mining/HotM, Garden, weight, or readiness.

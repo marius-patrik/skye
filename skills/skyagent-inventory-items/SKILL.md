@@ -1,22 +1,25 @@
 ---
 name: skyagent-inventory-items
-description: Decode SkyBlock inventory sections and normalize item records with SkyAgent. Use for armor, equipment, wardrobe, inventory, ender chest, backpacks, accessory bag, personal vault, pets, raw item dumps, NBT state, item metadata, and item modifier reasoning.
+description: Decode SkyBlock inventory sections and normalize item records with SkyAgent. Use for inventory, armor, equipment, wardrobe, backpacks, accessory bag item dumps, normalized item records, item metadata lookups, raw NBT state, pets, personal vault, and item modifier reasoning.
 ---
 
 # SkyAgent Inventory/Items
 
-Use this skill when the task depends on item stacks or inventory API state.
+Use this skill when the task depends on item stacks, inventory API state, decoded NBT, normalized item records, or item metadata.
 
 ## Tool Routing
 
-- Use `skyblock_inventory` for all supported sections.
-- Use `skyblock_inventory_section` for one section.
-- Use `skyblock_item_dump` when debugging raw decoded item records.
-- Use `skyblock_normalized_items` before item reasoning across sections.
-- Use `skyblock_item_metadata` for NotEnoughUpdates-style item details.
+- Use `skyblock_inventory` for all supported sections or when the user asks for broad inventory, armor, equipment, wardrobe, backpacks, accessory bag, personal vault, ender chest, or pets context.
+- Use `skyblock_inventory_section` for one named section such as `armor`, `equipment`, `wardrobe`, `inventory`, `ender_chest`, `backpacks`, `accessory_bag`, `personal_vault`, or `pets`.
+- Use `skyblock_item_dump` only when the user asks for raw decoded NBT, parser debugging, item dumps, accessory bag item dumps, or exact low-level fields.
+- Use `skyblock_normalized_items` before item reasoning across sections, upgrade checks, modifier comparisons, or user-facing item summaries.
+- Use `skyblock_item_metadata` for NotEnoughUpdates-style item details, display names, rarity, category, NPC sale data, upgrade metadata, or fallback item identity.
 
 ## Rules
 
+- Prefer normalized output for recommendations and summaries; request raw decoded debug data only when the user asks for parser details, missing fields, or exact NBT.
 - Keep raw decoded NBT behind explicit debug requests.
-- Report missing or disabled inventory API sections as warnings.
+- Report disabled inventory API, missing sections, or partial profile data as warnings instead of treating them as empty inventories.
+- For corrupt NBT, preserve the affected section/container ID when available, warn clearly, and continue with unaffected sections.
+- If item metadata is unavailable, continue with normalized item IDs and mark metadata-backed fields as unavailable.
 - Do not infer item modifiers that are not present in normalized records.

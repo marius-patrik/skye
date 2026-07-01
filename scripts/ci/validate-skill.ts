@@ -100,4 +100,22 @@ for (const expected of [
   }
 }
 
+const inventorySkill = fs.readFileSync(path.join(skillsRoot, "skyagent-inventory-items", "SKILL.md"), "utf8");
+for (const expected of [
+  "skyblock_inventory",
+  "skyblock_inventory_section",
+  "skyblock_item_dump",
+  "skyblock_normalized_items",
+  "skyblock_item_metadata",
+  "accessory bag item dumps",
+  "corrupt NBT",
+  "disabled inventory API",
+  "partial profile data",
+  "item metadata is unavailable",
+]) {
+  if (!inventorySkill.includes(expected)) {
+    fail(`skyagent-inventory-items must mention ${expected}`);
+  }
+}
+
 console.log(`Skill validation passed (${folders.length} skills)`);
