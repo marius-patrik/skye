@@ -18,7 +18,7 @@ Use this skill when the user asks for Hypixel SkyBlock profile analysis, progres
 ## Default Analysis Flow
 
 1. Identify the user's concrete target and constraints.
-2. Route to the narrow SkyAgent subskill when the task is clearly profile/API, inventory/items, economy, accessories, progression/readiness, planning, or provider maintenance.
+2. Route to the narrow SkyAgent subskill when the task is clearly profile/API, inventory/items, economy, accessories, progression, readiness/weight, planning, or provider maintenance.
 3. Pull current profile state through SkyAgent MCP tools when available.
 4. Check whether the target depends on recent patches, economy shifts, or known meta changes.
 5. Compare the user's current bottlenecks against the target.
@@ -30,7 +30,8 @@ Use this skill when the user asks for Hypixel SkyBlock profile analysis, progres
 - Use `$skyagent-inventory-items` for inventory sections, armor, equipment, wardrobe, backpacks, accessory bag item dumps, normalized item records, NBT state, item metadata, or modifier reasoning.
 - Use `$skyagent-economy` for coin value, prices, Bazaar, auctions, LBIN, price history, networth, item networth, provider freshness, stale-cache behavior, third-party uncertainty, or market volatility.
 - Use `$skyagent-accessories` for Magical Power, accessory bag state, missing accessories, duplicates, enrichment, recombobulation, budget-constrained coin-per-MP upgrades, or accessory price uncertainty.
-- Use `$skyagent-progression` for profile sections, XP curves, skills, Dungeons, Slayer, Mining/HotM, Garden, weight, or readiness.
+- Use `$skyagent-progression` for profile sections, XP curves, skills, Catacombs, Slayer, Bestiary, Collections, Minions, Museum, Mining/HotM, Garden, Crimson Isle/Kuudra, Rift, Trophy Fishing, Pets, Essence, currencies, or unlocks.
+- Use `$skyagent-readiness-weight` for Senither/Lily-style weight status, unsupported exact formulas, formula freshness, and readiness for dungeons, slayer, kuudra, garden, or mining.
 - Use `$skyagent-planning` for goal plans, next upgrades, blockers, daily/weekly routes, and what to skip.
 - Use `$skyagent-provider-maintenance` for patch-sensitive metas, provider freshness, stale formulas, parity assumptions, or official-source verification.
 

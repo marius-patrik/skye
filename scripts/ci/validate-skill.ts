@@ -77,6 +77,7 @@ for (const expected of [
   "$skyagent-economy",
   "$skyagent-accessories",
   "$skyagent-progression",
+  "$skyagent-readiness-weight",
   "$skyagent-planning",
   "$skyagent-provider-maintenance",
 ]) {
@@ -154,6 +155,50 @@ for (const expected of [
 ]) {
   if (!accessoriesSkill.includes(expected)) {
     fail(`skyagent-accessories must mention ${expected}`);
+  }
+}
+
+const progressionSkill = fs.readFileSync(path.join(skillsRoot, "skyagent-progression", "SKILL.md"), "utf8");
+for (const expected of [
+  "skyblock_profile_section",
+  "skyblock_progression",
+  "$skyagent-readiness-weight",
+  "Catacombs",
+  "Bestiary",
+  "Collections",
+  "Minions",
+  "Museum",
+  "Mining/HotM",
+  "Crimson Isle/Kuudra",
+  "Rift",
+  "Trophy Fishing",
+  "Essence",
+  "currencies",
+  "unlocks",
+  "missing-data limits",
+]) {
+  if (!progressionSkill.includes(expected)) {
+    fail(`skyagent-progression must mention ${expected}`);
+  }
+}
+
+const readinessSkill = fs.readFileSync(path.join(skillsRoot, "skyagent-readiness-weight", "SKILL.md"), "utf8");
+for (const expected of [
+  "skyblock_weight",
+  "skyblock_readiness",
+  "Senither/Lily-style",
+  "unsupported exact formulas",
+  "formula freshness",
+  "dungeons",
+  "slayer",
+  "kuudra",
+  "garden",
+  "mining",
+  "Verify current external meta",
+  "missing-data warnings",
+]) {
+  if (!readinessSkill.includes(expected)) {
+    fail(`skyagent-readiness-weight must mention ${expected}`);
   }
 }
 
