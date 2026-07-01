@@ -39,6 +39,9 @@
     "packages/gateway": {
       "name": "@skyagent/gateway",
       "version": "0.1.0",
+      "bin": {
+        "skyagent-gateway": "./src/bin.ts",
+      },
       "dependencies": {
         "@skyagent/core": "workspace:*",
       },
@@ -58,6 +61,7 @@
       },
       "dependencies": {
         "@skyagent/core": "workspace:*",
+        "@skyagent/gateway": "workspace:*",
         "ink": "^7.1.0",
         "react": "^19.2.7",
       },

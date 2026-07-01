@@ -7,7 +7,8 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./bin": "./src/bin.ts"
+    "./bin": "./src/bin.ts",
+    "./manager": "./src/manager.ts"
   },
   "scripts": {
     "start": "bun ./src/bin.ts"

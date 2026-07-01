@@ -1,6 +1,25 @@
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
-import { expect, test } from "bun:test";
-import { SkyAgentTuiApp, tuiSnapshot, tuiStatus } from "../src/index.tsx";
+import { afterEach, expect, test } from "bun:test";
+import { stopGatewayProcess } from "@skyagent/gateway/manager";
+import { connectTuiGateway, SkyAgentTuiApp, tuiSnapshot, tuiStatus } from "../src/index.tsx";
+
+let tempHome: string | null = null;
+
+afterEach(async () => {
+  if (tempHome) {
+    await stopGatewayProcess();
+    fs.rmSync(tempHome, { recursive: true, force: true });
+    tempHome = null;
+  }
+  delete process.env.SKYAGENT_HOME;
+});
+
+function isolatedSkyAgentHome() {
+  tempHome = fs.mkdtempSync(path.join(os.tmpdir(), "skyagent-tui-test-"));
+  process.env.SKYAGENT_HOME = tempHome;
+}
 
 test("tui status initializes without live credentials", () => {
   const status = tuiStatus();
@@ -26,6 +45,18 @@ test("tui smoke snapshot exposes screens and does not print secrets", () => {
 
 test("tui exports an Ink-backed React app surface", () => {
   expect(SkyAgentTuiApp).toBeTypeOf("function");
+});
+
+test("tui gateway session starts local gateway and returns redacted config", async () => {
+  isolatedSkyAgentHome();
+
+  const session = await connectTuiGateway();
+
+  expect(session.gateway.status.running).toBe(true);
+  expect(session.gateway.status.url).toStartWith("http://127.0.0.1:");
+  expect(session.config.apiKeyConfigured).toBeTypeOf("boolean");
+  expect(JSON.stringify(session.gateway.status)).not.toContain("\"token\":");
+  expect(JSON.stringify(session.config)).not.toContain("apiKey\":");
 });
 
 test("root skyagent script delegates tui smoke mode", async () => {
