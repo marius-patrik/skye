@@ -13,8 +13,10 @@
     "./prices": "./src/prices.ts",
     "./progression": "./src/progression.ts",
     "./profile": "./src/profile.ts",
+    "./readiness": "./src/readiness.ts",
     "./sections": "./src/sections/index.ts",
-    "./store": "./src/store.ts"
+    "./store": "./src/store.ts",
+    "./weight": "./src/weight.ts"
   },
   "dependencies": {
     "prismarine-nbt": "^2.8.0"

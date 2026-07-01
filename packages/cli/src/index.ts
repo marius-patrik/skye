@@ -8,7 +8,9 @@ import { itemMetadata, normalizedItemsForPlayer } from "@skyagent/core/items";
 import { itemNetworthForPlayer, networthForPlayer } from "@skyagent/core/networth";
 import { coflnetPriceHistory, itemPrice, lowestBin } from "@skyagent/core/prices";
 import { compactProfileOverview, fetchProfileContext, profileSummaries, skycryptUrl } from "@skyagent/core/profile";
+import { readinessForPlayer } from "@skyagent/core/readiness";
 import { profileSectionForPlayer, progressionForPlayer } from "@skyagent/core/sections";
+import { weightForPlayer } from "@skyagent/core/weight";
 
 function print(value, pretty = true) {
   process.stdout.write(`${JSON.stringify(value, null, pretty ? 2 : 0)}\n`);
@@ -43,6 +45,8 @@ Usage:
   skyagent accessory-upgrades [nameOrUuid] [profileIdOrName] --budget <coins>
   skyagent section <name> [nameOrUuid] [profileIdOrName]
   skyagent progression [nameOrUuid] [profileIdOrName]
+  skyagent weight [nameOrUuid] [profileIdOrName]
+  skyagent readiness <dungeons|slayer|kuudra|garden|mining> [nameOrUuid] [profileIdOrName]
   skyagent item <internalId>
   skyagent price <itemId>
   skyagent lbin <itemId>
@@ -337,6 +341,20 @@ export async function command(args) {
   if (area === "progression") {
     const values = withoutFlags([action, ...rest].filter(Boolean));
     print(await progressionForPlayer(values[0], values[1]));
+    return;
+  }
+
+  if (area === "weight") {
+    const values = withoutFlags([action, ...rest].filter(Boolean));
+    print(await weightForPlayer(values[0], values[1]));
+    return;
+  }
+
+  if (area === "readiness") {
+    if (!action) {
+      throw new Error("Usage: skyagent readiness <dungeons|slayer|kuudra|garden|mining> [nameOrUuid] [profileIdOrName]");
+    }
+    print(await readinessForPlayer(action, rest[0], rest[1]));
     return;
   }
 

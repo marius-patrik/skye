@@ -8,7 +8,9 @@ import { itemMetadata, normalizedItemsForPlayer } from "@skyagent/core/items";
 import { itemNetworthForPlayer, networthForPlayer } from "@skyagent/core/networth";
 import { coflnetPriceHistory, itemPrice, lowestBin } from "@skyagent/core/prices";
 import { compactProfileOverview, fetchProfileContext, profileSummaries, skycryptUrl } from "@skyagent/core/profile";
+import { readinessForPlayer } from "@skyagent/core/readiness";
 import { profileSectionForPlayer, progressionForPlayer } from "@skyagent/core/sections";
+import { weightForPlayer } from "@skyagent/core/weight";
 
 const tools = [
   {
@@ -272,6 +274,32 @@ const tools = [
     },
   },
   {
+    name: "skyblock_weight",
+    description: "Return SkyAgent profile weight estimates and explicit unsupported status for exact Senither/Lily formulas when maintained formula tables are unavailable. Requires API key.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        player: { type: "string" },
+        profile: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "skyblock_readiness",
+    description: "Estimate readiness for dungeons, slayer, kuudra, garden, or mining with source fields, assumptions, freshness, and missing-data warnings. Requires API key.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        area: { type: "string", enum: ["dungeons", "slayer", "kuudra", "garden", "mining"] },
+        player: { type: "string" },
+        profile: { type: "string" },
+      },
+      required: ["area"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "skyblock_item_metadata",
     description: "Fetch NotEnoughUpdates-style metadata for a SkyBlock internal item ID.",
     inputSchema: {
@@ -525,6 +553,10 @@ async function callTool(name: string, args: Record<string, any> = {}) {
       return profileSectionForPlayer(args.section, args.player, args.profile);
     case "skyblock_progression":
       return progressionForPlayer(args.player, args.profile);
+    case "skyblock_weight":
+      return weightForPlayer(args.player, args.profile);
+    case "skyblock_readiness":
+      return readinessForPlayer(args.area, args.player, args.profile);
     case "skyblock_item_metadata":
       return itemMetadata(args.internalId);
     case "skyblock_price":
