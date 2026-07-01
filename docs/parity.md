@@ -16,6 +16,7 @@ For the detailed implementation spec and future issue slices, see `docs/parity-s
 - Conservative sectioned networth for purse, bank, and resolved direct item prices, with unknown prices and assumptions surfaced.
 - Accessory bag analysis with duplicate detection, recombobulation/enrichment signals, estimated Magical Power, missing accessories when metadata is available, and price-driven coin-per-MP upgrade ranking.
 - Shared progression section framework with skill, Catacombs, Slayer XP curves plus sections for skills, Dungeons, Slayer, Mining/HotM, Garden, Bestiary, Collections, Minions, Museum, Crimson Isle/Kuudra, Rift, Trophy Fishing, Pets, Essence, currencies, and unlocks. Outputs include source fields, missing-data warnings, formulas/tables, and provenance.
+- Weight and readiness estimators for broad profile comparison and dungeons, Slayer, Kuudra, Garden, and Mining readiness. Exact Senither/Lily formulas are explicitly marked unsupported until maintained formula tables are bundled.
 
 ## Missing for SkyCrypt-Style Parity
 
@@ -25,7 +26,7 @@ For the detailed implementation spec and future issue slices, see `docs/parity-s
 - SkyCrypt/SkyHelper-grade networth calculation, including modifier, pet-level, skin, dye, museum, and miscellaneous valuables.
 - SkyHelper-grade missing accessories when a full maintained accessory universe is unavailable.
 - Full profile-viewer depth inside each progression section, including detailed SkyCrypt-grade UI breakdowns, per-floor dungeon badges, exact Garden milestone tables, full Museum item valuation, and richer Crimson Isle/Rift objective readiness.
-- Weight calculations such as Senither/Lily-style weight.
+- Exact Senither/Lily weight parity and maintained reference-formula synchronization.
 - Historical price sources and full lowest-BIN search beyond bounded auction-page scans.
 
 ## Current Networth Limits
