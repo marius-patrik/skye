@@ -16,6 +16,7 @@
     "./profile": "./src/profile.ts",
     "./readiness": "./src/readiness.ts",
     "./sections": "./src/sections/index.ts",
+    "./setup": "./src/setup.ts",
     "./store": "./src/store.ts",
     "./weight": "./src/weight.ts"
   },

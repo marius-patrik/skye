@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
-import { command, parseAccessoryUpgradeArgs, parseInventoryArgs, parseItemDumpArgs, parseItemNetworthArgs, parseNextUpgradesArgs, parsePlanArgs } from "../src/index.ts";
+import { command, parseAccessoryUpgradeArgs, parseInventoryArgs, parseItemDumpArgs, parseItemNetworthArgs, parseNextUpgradesArgs, parsePlanArgs, parseSetupArgs } from "../src/index.ts";
 
 let tempHome: string | null = null;
 
@@ -79,6 +79,28 @@ describe("CLI argument parsing", () => {
 
   test("plan validates budget before fetching profile data", async () => {
     await expect(command(["plan", "f7", "--budget", "-1"])).rejects.toThrow("Usage: skyagent plan");
+  });
+
+  test("setup parses non-interactive flags", () => {
+    expect(parseSetupArgs(["--json", "--username", "Pastik_", "--api-key", "secret", "--profile", "Apple", "--no-write"])).toEqual({
+      json: true,
+      noWrite: true,
+      username: "Pastik_",
+      apiKey: "secret",
+      profile: "Apple",
+    });
+  });
+
+  test("setup status runs without live credentials", async () => {
+    isolatedSkyAgentHome();
+
+    await command(["setup", "status", "--json"]);
+  });
+
+  test("setup --json reports missing username without prompting", async () => {
+    isolatedSkyAgentHome();
+
+    await command(["setup", "--json"]);
   });
 
   test("root skyagent script delegates plan command to CLI", async () => {

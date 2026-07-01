@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+import { createInterface } from "node:readline/promises";
 import { addMemory, configPath, deleteMemory, publicConfig, readMemories, setConfigValue } from "@skyagent/core/store";
 import { accessoriesForPlayer, accessoryUpgradesForPlayer, missingAccessoriesForPlayer } from "@skyagent/core/accessories";
 import { configuredProfileId, hypixelRequest, resolveMinecraftUsername, resourceEndpoint, skyblockProfiles, uuidFromNameOrUuid } from "@skyagent/core/hypixel";
@@ -11,6 +12,7 @@ import { coflnetPriceHistory, itemPrice, lowestBin } from "@skyagent/core/prices
 import { compactProfileOverview, fetchProfileContext, profileSummaries, skycryptUrl } from "@skyagent/core/profile";
 import { readinessForPlayer } from "@skyagent/core/readiness";
 import { profileSectionForPlayer, progressionForPlayer } from "@skyagent/core/sections";
+import { runSetup, setupStatus } from "@skyagent/core/setup";
 import { weightForPlayer } from "@skyagent/core/weight";
 import { gatewayCommand } from "./gateway.ts";
 import { webCommand } from "./web.ts";
@@ -29,6 +31,8 @@ Usage:
   skyagent config set uuid <uuid>
   skyagent config set profile <profileId>
   skyagent config set api-key <key>
+  skyagent setup [--json] [--username <name>] [--api-key <key>] [--profile <profileIdOrName>] [--no-write]
+  skyagent setup status [--json]
   skyagent resolve <minecraftName>
   skyagent player [nameOrUuid]
   skyagent status [nameOrUuid]
@@ -173,6 +177,77 @@ export function parsePlanArgs(args) {
   };
 }
 
+export function parseSetupArgs(args) {
+  return {
+    json: args.includes("--json"),
+    noWrite: args.includes("--no-write"),
+    username: optionValue(args, "--username"),
+    apiKey: optionValue(args, "--api-key"),
+    profile: optionValue(args, "--profile"),
+  };
+}
+
+async function hiddenQuestion(prompt: string) {
+  if (!process.stdin.isTTY || !process.stdin.setRawMode) {
+    throw new Error("Hidden setup prompts require an interactive TTY. Use --api-key for non-interactive setup.");
+  }
+  process.stderr.write(prompt);
+  const stdin = process.stdin;
+  const previousRawMode = stdin.isRaw;
+  stdin.setEncoding("utf8");
+  stdin.setRawMode(true);
+  stdin.resume();
+  return await new Promise<string>((resolve, reject) => {
+    let value = "";
+    function cleanup() {
+      stdin.off("data", onData);
+      stdin.setRawMode(previousRawMode);
+      process.stderr.write("\n");
+    }
+    function onData(chunk: string) {
+      for (const char of chunk) {
+        if (char === "\u0003") {
+          cleanup();
+          reject(new Error("Setup cancelled."));
+          return;
+        }
+        if (char === "\r" || char === "\n") {
+          cleanup();
+          resolve(value);
+          return;
+        }
+        if (char === "\b" || char === "\u007f") {
+          value = value.slice(0, -1);
+          continue;
+        }
+        value += char;
+      }
+    }
+    stdin.on("data", onData);
+  });
+}
+
+async function promptSetupInputs(initial) {
+  const current = publicConfig();
+  if (!process.stdin.isTTY || initial.json) {
+    return initial;
+  }
+  const rl = createInterface({ input: process.stdin, output: process.stderr });
+  try {
+    const username = initial.username ?? current.username ?? await rl.question("Minecraft username: ");
+    const apiKey = initial.apiKey ?? (current.apiKeyConfigured ? null : await hiddenQuestion("Hypixel API key: "));
+    const profile = initial.profile ?? await rl.question("SkyBlock profile name or ID (blank for selected/default): ");
+    return {
+      ...initial,
+      username: username || null,
+      apiKey: apiKey || null,
+      profile: profile || null,
+    };
+  } finally {
+    rl.close();
+  }
+}
+
 export async function command(args) {
   const [area, action, ...rest] = args;
 
@@ -209,6 +284,24 @@ export async function command(args) {
       print(setConfigValue(keyMap[key], value));
       return;
     }
+  }
+
+  if (area === "setup") {
+    const args = [action, ...rest].filter(Boolean);
+    const compact = args.includes("--json");
+    if (action === "status") {
+      print(setupStatus(), !compact);
+      return;
+    }
+    const parsed = parseSetupArgs(args);
+    const inputs = await promptSetupInputs(parsed);
+    print(await runSetup({
+      username: inputs.username,
+      apiKey: inputs.apiKey,
+      profile: inputs.profile,
+      write: !inputs.noWrite,
+    }), !compact);
+    return;
   }
 
   if (area === "gateway") {
