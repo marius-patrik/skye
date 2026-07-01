@@ -1,0 +1,14 @@
+{
+  "name": "@skyagent/gateway",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "bun ./src/bin.ts"
+  },
+  "dependencies": {
+    "@skyagent/core": "workspace:*"
+  }
+}

@@ -22,6 +22,9 @@
       "@skyagent/core/*": [
         "packages/core/src/*.ts"
       ],
+      "@skyagent/gateway": [
+        "packages/gateway/src/index.ts"
+      ],
       "@skyagent/mcp": [
         "packages/mcp/src/index.ts"
       ],
