@@ -42,6 +42,7 @@ Use this skill when the user asks for Hypixel SkyBlock profile analysis, progres
 ## SkyAgent Tooling
 
 - Use `skyagent_config_get` first to see whether username, UUID, selected profile, and API key are configured.
+- Use `skyagent setup status --json` or `skyagent setup --json` from the CLI when local profile/auth bootstrap is needed; it reports missing setup requirements without printing secrets.
 - Use `minecraft_resolve_username` when the user gives a Minecraft name and a UUID is needed.
 - Use `skyblock_profiles` to inspect the user's available SkyBlock profiles before choosing a profile-specific endpoint.
 - Use `skyblock_profiles_summary` and `skyblock_profile_overview` before asking broad progression questions; these reduce raw profile noise.
@@ -67,6 +68,8 @@ SkyAgent can decode inventory NBT, normalize item-stack records with optional No
 ## Secrets and Storage
 
 Prefer `HYPIXEL_API_KEY` from the environment. The CLI and MCP server can also store an API key in the SkyAgent user config directory when the user explicitly asks. Do not print API key values back to the user.
+
+For first-run setup, prefer `skyagent setup` over manual config edits. Non-interactive agents should use `skyagent setup --json --username <name> --api-key <key> --profile <profileIdOrName>` when the user has explicitly provided the secret, or `skyagent setup --json` to inspect missing requirements.
 
 Config and memories live outside the plugin repo by default, under `%APPDATA%\skyagent` on Windows or `~/.skyagent` elsewhere. `SKYAGENT_HOME` can override this for testing.
 

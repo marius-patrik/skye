@@ -65,7 +65,7 @@ export function normalizePath(input) {
   return endpoint;
 }
 
-export async function hypixelRequest(endpoint: string, query: Record<string, unknown> = {}, options: { requireKey?: boolean } = {}) {
+export async function hypixelRequest(endpoint: string, query: Record<string, unknown> = {}, options: { requireKey?: boolean; apiKey?: string } = {}) {
   const config = readConfig();
   const path = normalizePath(endpoint);
   const url = new URL(`${HYPIXEL_BASE_URL}/${path}`);
@@ -78,7 +78,7 @@ export async function hypixelRequest(endpoint: string, query: Record<string, unk
   const headers: Record<string, string> = {
     "User-Agent": "skyagent/0.1.0",
   };
-  const apiKey = getApiKey(config);
+  const apiKey = options.apiKey || getApiKey(config);
   if (apiKey) {
     headers["API-Key"] = apiKey;
   } else if (options.requireKey) {
