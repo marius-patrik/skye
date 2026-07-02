@@ -220,6 +220,10 @@ describe("CLI argument parsing", () => {
       refresh: true,
       values: ["Notch", "Apple"],
     });
+    expect(parseContextArgs(["--refresh", "Notch", "Apple"])).toMatchObject({
+      refresh: true,
+      values: ["Notch", "Apple"],
+    });
   });
 
   test("start parses profile bootstrap controls", () => {

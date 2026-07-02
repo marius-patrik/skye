@@ -179,6 +179,11 @@ test("context get defaults to cached snapshot reads", async () => {
 
   expect(result.kind).toBe("skyagent.agentContext");
   expect(result.cache.status).toBe("hit");
+  expect(result.sections).toMatchObject({
+    cache: { status: "cached" },
+    pets: { status: "cached" },
+    events: { status: "unavailable", included: false },
+  });
   expect(result.rawPayloadsIncluded).toBe(false);
 });
 
@@ -218,6 +223,11 @@ test("start MCP tool returns cached context and persists a session event", async
   expect(result.kind).toBe("skyagent.startup");
   expect(result.context.kind).toBe("skyagent.agentContext");
   expect(result.context.cache.status).toBe("hit");
+  expect(result.context.sections).toMatchObject({
+    cache: { status: "cached" },
+    pets: { status: "cached" },
+    providerFreshness: expect.objectContaining({ providerCount: expect.any(Number) }),
+  });
   expect(result.sessionEvent.type).toBe("agent.session_start");
   expect(result.rawPayloadsIncluded).toBe(false);
   expect(batch.events).toContainEqual(expect.objectContaining({ id: result.sessionEvent.id, type: "agent.session_start" }));
