@@ -352,9 +352,11 @@ export function parseProfileSnapshotArgs(args) {
 
 export function parseContextArgs(args) {
   const ttl = optionValue(args, "--ttl-ms");
+  const refresh = args[0] === "refresh" || args.includes("--refresh");
+  const valueArgs = args[0] === "refresh" ? args.slice(1) : args.filter((arg) => arg !== "--refresh");
   return {
-    refresh: args[0] === "refresh",
-    values: positionalArgs(args[0] === "refresh" ? args.slice(1) : args, ["--ttl-ms"]),
+    refresh,
+    values: positionalArgs(valueArgs, ["--ttl-ms"]),
     cacheOnly: args.includes("--cache-only"),
     allowStale: args.includes("--allow-stale"),
     ttlMs: ttl === null ? undefined : Number(ttl),

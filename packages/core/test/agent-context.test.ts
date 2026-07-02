@@ -29,6 +29,9 @@ function context() {
       pets_data: {
         pets: [{ uuid: "pet-1", type: "SHEEP", active: true, exp: 100 }],
       },
+      accessory_bag_storage: {
+        highest_magical_power: 123,
+      },
     },
     rateLimit: { limit: "120", remaining: "100", reset: "1" },
   };
@@ -76,10 +79,26 @@ describe("agent context capsule", () => {
     expect(capsule.accessories).toMatchObject({
       status: "partial",
       valuation: { status: "partial", maxPriceLookups: 75 },
+      magicalPower: { value: 123, source: "profile_official", sourcePath: "member.accessory_bag_storage.highest_magical_power", estimated: 42 },
       ownedCount: 1,
       activeCount: 1,
       missingCount: 1,
     });
+    expect(capsule.sections).toMatchObject({
+      cache: { status: "fresh", stale: false },
+      armor: { status: "missing" },
+      pets: { status: "fresh", itemCount: 1 },
+      accessories: { status: "partial", itemCount: 1, warningCount: 1 },
+      readiness: { status: "fresh" },
+      objectives: { status: "fresh", activeCount: 1 },
+      providerFreshness: { status: "fresh", providerCount: 1 },
+      events: { status: "unavailable", included: false },
+    });
+    expect(capsule.sections.readiness.areas).toContainEqual(expect.objectContaining({
+      area: "dungeons",
+      status: "fresh",
+      readinessStatus: "estimate",
+    }));
     expect(capsule.accessories.warnings).toContainEqual(expect.objectContaining({ code: "accessory_price_limit_reached" }));
     expect(capsule.objectives.active).toContainEqual(expect.objectContaining({ title: "Prepare M5" }));
     expect(capsule.pets.activePet).toMatchObject({ internalId: "SHEEP", active: true });
@@ -106,13 +125,75 @@ describe("agent context capsule", () => {
     });
 
     expect(capsule.cache.status).toBe("refreshed");
-    expect(capsule.gear.armor).toMatchObject({ available: false, itemCount: null });
-    expect(capsule.pets).toMatchObject({ available: true, itemCount: null });
-    expect(capsule.accessories).toMatchObject({ magicalPower: null, ownedCount: null });
+    expect(capsule.gear.armor).toMatchObject({ status: "missing", available: false, itemCount: null });
+    expect(capsule.pets).toMatchObject({ status: "cached", available: true, itemCount: null });
+    expect(capsule.accessories).toMatchObject({ status: "missing", magicalPower: null, ownedCount: null });
+    expect(capsule.sections).toMatchObject({
+      cache: { status: "fresh" },
+      armor: { status: "missing" },
+      pets: { status: "cached" },
+      accessories: { status: "missing" },
+      providerFreshness: { status: "unavailable" },
+    });
     expect(capsule.readiness.map((entry) => entry.area)).toEqual(["dungeons", "slayer", "kuudra", "garden", "mining"]);
     expect(capsule.warnings).toContainEqual(expect.objectContaining({ code: "snapshot_only_context" }));
     expect(capsule.objectives.active).toContainEqual(expect.objectContaining({ itemKind: "buy" }));
     expect(JSON.stringify(capsule)).not.toContain("secret-key");
+  });
+
+  test("keeps official profile Magical Power when accessory-derived estimate is unavailable", async () => {
+    const base = context();
+    const capsule = await buildAgentContext(base, {
+      now: 1_000,
+      snapshot: buildProfileSnapshot(base, { ttlMs: 60_000, fetchedAtMs: 1_000 }),
+      providers: { generatedAt: new Date(1_000).toISOString(), providers: [], warnings: [] },
+      accessoriesProvider: async () => ({
+        status: "partial",
+        valuation: { status: "unavailable" },
+        owned: [],
+        activeAccessories: [],
+        duplicates: [],
+        missing: [],
+        cheapestMissing: [],
+        providerFreshness: [],
+        warnings: [{ code: "accessory_metadata_unavailable", message: "Metadata unavailable" }],
+      }),
+    });
+
+    expect(capsule.accessories.magicalPower).toMatchObject({
+      value: 123,
+      source: "profile_official",
+      sourcePath: "member.accessory_bag_storage.highest_magical_power",
+      exact: true,
+      estimated: null,
+    });
+  });
+
+  test("aggregates cached and stale provider freshness distinctly", async () => {
+    const base = context();
+    const provider = async (status: string) => buildAgentContext(base, {
+      now: 1_000,
+      snapshot: buildProfileSnapshot(base, { ttlMs: 60_000, fetchedAtMs: 1_000 }),
+      providers: {
+        generatedAt: new Date(1_000).toISOString(),
+        providers: [{ id: "pricing", status, source: "test", cache: null }],
+        warnings: [],
+      },
+      accessoriesProvider: async () => ({
+        status: "partial",
+        valuation: { status: "unavailable" },
+        owned: [],
+        activeAccessories: [],
+        duplicates: [],
+        missing: [],
+        cheapestMissing: [],
+        providerFreshness: [],
+        warnings: [],
+      }),
+    });
+
+    await expect(provider("cached")).resolves.toMatchObject({ sections: { providerFreshness: { status: "cached" } } });
+    await expect(provider("stale")).resolves.toMatchObject({ sections: { providerFreshness: { status: "stale" } } });
   });
 
   test("uses enriched cached context summary when snapshot includes one", () => {
@@ -139,8 +220,48 @@ describe("agent context capsule", () => {
     });
 
     expect(capsule.gear.armor).toMatchObject({ available: true, itemCount: 4 });
+    expect(capsule.gear.armor).toMatchObject({ status: "cached", freshness: { status: "cached", source: "profile-snapshot-cache" } });
     expect(capsule.pets.items).toContainEqual(expect.objectContaining({ name: "Sheep" }));
-    expect(capsule.accessories).toMatchObject({ ownedCount: 1 });
-    expect(capsule.readiness).toContainEqual(expect.objectContaining({ area: "dungeons", rating: "partial" }));
+    expect(capsule.accessories).toMatchObject({ status: "cached", ownedCount: 1 });
+    expect(capsule.readiness).toContainEqual(expect.objectContaining({
+      area: "dungeons",
+      rating: "partial",
+      status: "estimate",
+      freshnessStatus: "cached",
+    }));
+    expect(capsule.sections.readiness).toMatchObject({
+      status: "cached",
+      areas: [expect.objectContaining({
+        area: "dungeons",
+        status: "cached",
+        readinessStatus: "estimate",
+        rating: "partial",
+      })],
+    });
+  });
+
+  test("marks stale snapshot-only sections distinctly", () => {
+    const base = context();
+    const snapshot = {
+      ...buildProfileSnapshot(base, { ttlMs: 1, fetchedAtMs: 1_000 }),
+      cacheStatus: "hit",
+      stale: true,
+      ageMs: 10_000,
+    };
+
+    const capsule = buildAgentContextFromSnapshot(snapshot, {
+      now: 11_000,
+      providers: { generatedAt: new Date(11_000).toISOString(), providers: [], warnings: [] },
+    });
+
+    expect(capsule.cache.stale).toBe(true);
+    expect(capsule.sections.cache.status).toBe("stale");
+    expect(capsule.gear.armor.status).toBe("missing");
+    expect(capsule.pets.status).toBe("stale");
+    expect(capsule.accessories.status).toBe("missing");
+    expect(capsule.warnings).toContainEqual(expect.objectContaining({ code: "snapshot_only_context" }));
+    expect(capsule.gear.armor.warnings).toContainEqual(expect.objectContaining({ code: "cached_detail_missing", sourcePath: "overview.inventoryApiSignals.hasArmor" }));
+    expect(capsule.gear.armor.warnings).toContainEqual(expect.objectContaining({ code: "stale_profile_snapshot", sourcePath: "profile-snapshot-cache" }));
+    expect(capsule.accessories.warnings).toContainEqual(expect.objectContaining({ code: "cached_detail_missing", sourcePath: "overview.inventoryApiSignals.hasAccessoryBag" }));
   });
 });
