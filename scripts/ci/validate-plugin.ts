@@ -54,6 +54,50 @@ for (const relativePath of [manifest.skills, manifest.mcpServers]) {
   }
 }
 
+if (fs.existsSync(path.join(repoRoot, "packages", "mcmod"))) {
+  fail("packages/mcmod is deferred; do not add Fabric mod implementation without an explicit implementation issue");
+}
+
+const architectureDoc = fs.readFileSync(path.join(repoRoot, "docs", "product-architecture.md"), "utf8");
+for (const expected of [
+  "Future Minecraft Mod Telemetry Ingress",
+  "producer of typed context events",
+  "typed `skyagent.contextEvent` records",
+  "auth/localhost boundaries",
+  "require exposing the gateway publicly",
+  "127.0.0.1",
+  "local bearer token",
+  "inventory delta",
+  "purse delta",
+  "minecraft.location_update",
+  "minecraft.inventory_delta",
+  "purseDelta",
+  "active objective progress",
+  "minecraft.objective_progress",
+  "minecraft.chat_signal",
+  "minecraft.terminal_session",
+  "Terminal passthrough",
+  "No `packages/mcmod` or Fabric implementation is added",
+  "Mod implementation is deferred until explicit user instruction",
+  "does not implement the Fabric mod",
+]) {
+  if (!architectureDoc.includes(expected)) {
+    fail(`docs/product-architecture.md must mention ${expected}`);
+  }
+}
+
+const agentsDoc = fs.readFileSync(path.join(repoRoot, ".agents", "AGENTS.md"), "utf8");
+for (const expected of [
+  "Documentation-only issues may define future contracts",
+  "must not add `packages/mcmod`",
+  "Mod implementation is deferred until explicit user instruction",
+  "not Fabric implementation",
+]) {
+  if (!agentsDoc.includes(expected)) {
+    fail(`.agents/AGENTS.md must mention ${expected}`);
+  }
+}
+
 const mcp = JSON.parse(fs.readFileSync(path.join(repoRoot, ".mcp.json"), "utf8"));
 const server = mcp.mcpServers?.skyagent;
 if (!server) {

@@ -114,13 +114,106 @@ Hypixel server status reads and monitoring share the same reusable core producer
 
 Provider status reads emit `provider.cache_status` and `provider.cache_status_change`. The gateway provider route and agent context bootstrap both use this producer so cache/provider changes are visible to context watchers.
 
+### Future Minecraft Mod Telemetry Ingress
+
+The future Fabric Minecraft mod is deferred implementation work. When approved later, it should act only as another local producer of typed context events, specifically typed `skyagent.contextEvent` records. It should not bypass the context engine, write objective files directly, expose a public server, or require exposing the gateway publicly outside `127.0.0.1`.
+
+Expected auth/localhost boundaries:
+
+- The mod connects only to the existing localhost gateway or another explicitly configured loopback endpoint.
+- The mod authenticates with the same generated local bearer token or a derived short-lived session token; tokens must stay out of logs, chat, screenshots, objectives, and event payloads.
+- The gateway keeps ownership of persistence, sequence IDs, context history limits, and fanout to CLI/MCP/TUI/web consumers.
+- The mod should send typed events with source `{ kind: "minecraft-mod", id: <mod-instance-id>, transport: "localhost" }`, player/profile identity when known, freshness timestamps, and provenance such as `modId`, `minecraftVersion`, and `sessionId`.
+- Terminal passthrough is a local session event stream only. It must not open remote shell access, expose arbitrary command execution to public networks, or run without explicit local user setup.
+
+Example future event types cover location, inventory delta, purse delta, active objective progress, chat-derived SkyBlock signals, and terminal passthrough/session events:
+
+```json
+{
+  "type": "minecraft.location_update",
+  "source": { "kind": "minecraft-mod", "id": "skyagent-fabric", "transport": "localhost" },
+  "payload": {
+    "sessionId": "local-session-id",
+    "world": "SkyBlock",
+    "server": "hypixel",
+    "location": { "area": "Crystal Hollows", "x": 512, "y": 92, "z": -318 },
+    "biomeOrZone": "Mithril Deposits"
+  }
+}
+```
+
+```json
+{
+  "type": "minecraft.inventory_delta",
+  "source": { "kind": "minecraft-mod", "id": "skyagent-fabric", "transport": "localhost" },
+  "payload": {
+    "inventoryDelta": [
+      { "itemId": "ENCHANTED_HARD_STONE", "displayName": "Enchanted Hard Stone", "countDelta": 8 },
+      { "itemId": "ENCHANTED_DIAMOND", "displayName": "Enchanted Diamond", "countDelta": -1 }
+    ],
+    "purseDelta": 12500,
+    "reason": "pickup_or_sale"
+  }
+}
+```
+
+```json
+{
+  "type": "minecraft.objective_progress",
+  "source": { "kind": "minecraft-mod", "id": "skyagent-fabric", "transport": "localhost" },
+  "payload": {
+    "objectiveProgress": {
+      "objectiveId": "obj_hotm_route",
+      "taskId": "task_powder_grind",
+      "metric": "powder_mined",
+      "delta": 2400,
+      "current": 184000,
+      "target": 250000
+    }
+  }
+}
+```
+
+```json
+{
+  "type": "minecraft.chat_signal",
+  "source": { "kind": "minecraft-mod", "id": "skyagent-fabric", "transport": "localhost" },
+  "payload": {
+    "signal": "skyblock_drop_or_completion",
+    "chatDerived": true,
+    "rawTextRedacted": true,
+    "summary": "Completed commission",
+    "confidence": "medium"
+  }
+}
+```
+
+```json
+{
+  "type": "minecraft.terminal_session",
+  "source": { "kind": "minecraft-mod", "id": "skyagent-fabric", "transport": "localhost" },
+  "payload": {
+    "terminal": {
+      "sessionId": "local-terminal-session",
+      "event": "opened",
+      "surface": "in_game_overlay",
+      "passthrough": "local_gateway_only"
+    }
+  }
+}
+```
+
+The agent should treat mod events as useful live context, not authoritative profile truth. Important purchase, inventory, purse, or progression claims should still be reconciled through Hypixel API/profile snapshots when possible before updating durable objectives or making high-cost recommendations.
+
+No `packages/mcmod` or Fabric implementation is added by this contract. Mod implementation is deferred until explicit user instruction and a dedicated implementation issue.
+
 ## Objective Store
 
 Durable agent work items live in `objectives.json` under SkyAgent home. A normalized item model covers objectives, tasks/todos, buy-list entries, source-list entries, and snipe targets with stable IDs, status transitions, item IDs, target prices, budgets, priority, source provider, freshness, and warnings. CLI and MCP surfaces expose create/list/update/complete/delete operations, and context capsules include a compact live objective summary even when profile data is loaded from cache.
 
 Planner output separates recommendations into immediate actions, todo candidates, buy-list candidates, source-item candidates, snipe targets, and skip guidance. Planning can read cached context/objective summaries when requested, and it creates or updates objective records only behind explicit persistence flags.
 
-Minecraft mod telemetry is reserved as a future producer through provenance metadata only. Expected future fields include `modId`, `minecraftVersion`, `sessionId`, `world`, `location`, `inventoryDelta`, and `objectiveProgress`; this repo slice does not implement the Fabric mod.
+Minecraft mod telemetry is reserved as a future producer through provenance metadata and the event ingress contract only. Expected future fields include `modId`, `minecraftVersion`, `sessionId`, `world`, `location`, `inventoryDelta`, `purseDelta`, active objective progress through `objectiveProgress`, chat-derived SkyBlock signals, and terminal passthrough/session events; this repo slice does not implement the Fabric mod.
 
 ## Agent Skillset Contract
 

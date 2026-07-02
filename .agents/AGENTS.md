@@ -8,7 +8,7 @@ Future web app work should use Bun, Rsbuild, React, TypeScript, and shadcn/ui. D
 
 Do not implement web app work unless the user explicitly requests it for the current issue. Existing web stack notes are constraints for approved web work, not permission to start it.
 
-Do not implement Minecraft mod or mcmod work unless the user explicitly requests it and a dedicated issue spec exists.
+Do not implement Minecraft mod or mcmod work unless the user explicitly requests it and a dedicated implementation issue spec exists. Documentation-only issues may define future contracts, but must not add `packages/mcmod`, Fabric build files, Minecraft runtime dependencies, or mod source code. Mod implementation is deferred until explicit user instruction.
 
 ## Operating Mode
 
@@ -46,7 +46,7 @@ Do not implement Minecraft mod or mcmod work unless the user explicitly requests
 - Keep MCP tool schemas and dispatch in `packages/mcp/src/`; `scripts/mcp-server.ts` is only a compatibility wrapper.
 - Keep interactive terminal UI work in `packages/tui/` and depend on `@skyagent/core`; do not import CLI or MCP internals.
 - Keep web app work in `packages/web/` using Bun, Rsbuild, React, TypeScript, and shadcn/ui conventions; depend on `@skyagent/core` rather than importing CLI, MCP, or TUI internals.
-- Treat web app and Minecraft mod implementation as deferred work unless the current issue explicitly authorizes that surface.
+- Treat web app and Minecraft mod implementation as deferred work unless the current issue explicitly authorizes that surface. A telemetry contract issue authorizes docs and validation only, not Fabric implementation.
 
 ## Skillset Maintenance
 
