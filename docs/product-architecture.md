@@ -147,7 +147,11 @@ Concrete model providers must be configured behind LiteLLM rather than added as 
 
 ## Context Event Contract
 
-The context engine stores bounded `skyagent.contextEvent` records with source, timestamp, optional player/profile identity, payload, freshness, provider provenance, and monotonic sequence IDs for reconnects. Initial producers include Hypixel server/status checks, profile snapshot refreshes, provider/cache status changes, CLI/MCP/gateway explicit events, and later objective progress. `skyagent context watch` streams newline-delimited events by default and keeps `--once` for deterministic agent/test reads. CLI explicit events are persisted to `context-events.ndjson` under SkyAgent home so separate CLI invocations can reconnect and read them.
+The context engine stores bounded `skyagent.contextEvent` records with source, timestamp, optional player/profile identity, payload, freshness, provider provenance, and monotonic sequence IDs for reconnects. Initial producers include Hypixel server/status checks, profile snapshot refreshes, provider/cache status changes, CLI/MCP/gateway explicit events, and later objective progress. `skyagent context watch` streams newline-delimited events by default and keeps `--once` for deterministic agent/test reads.
+
+Explicit ingress events from CLI, MCP, and the gateway persist to `context-events.ndjson` under SkyAgent home. `skyagent start` also persists its `agent.session_start` marker. `readContextEvents` merges persisted reconnect history with the current process' in-memory event bus so a fresh CLI, MCP server, or gateway process can recover durable explicit/session events while long-running watchers still see live advisory provider/status events. Provider/cache, server-status, and profile-refresh producers remain advisory freshness signals unless routed through an explicit persisted ingress surface.
+
+Event payloads must not contain raw secrets. Redacted status fields such as `apiKeyConfigured` or `auth.apiKeySource` are allowed, but scalar secret-like fields such as `apiKey`, `token`, `password`, or `secret` are rejected at event normalization.
 
 Hypixel server status reads and monitoring share the same reusable core producer. They emit `hypixel.server_status_change` when API availability, online state, session fields, or warning codes change, so CLI, MCP, gateway, and monitor callers all feed the same context stream. Long-running polling is started by host surfaces through `createServerStatusMonitor`; direct status reads remain non-interactive and emit the same change contract when state changes. Local input/configuration failures report `api.available: null`; provider/network failures report `api.available: false`; successful status responses include online state plus game type, mode, and map.
 
@@ -165,7 +169,7 @@ Expected auth/localhost boundaries:
 - The mod should send typed events with source `{ kind: "minecraft-mod", id: <mod-instance-id>, transport: "localhost" }`, player/profile identity when known, freshness timestamps, and provenance such as `modId`, `minecraftVersion`, and `sessionId`.
 - Terminal passthrough is a local session event stream only. It must not open remote shell access, expose arbitrary command execution to public networks, or run without explicit local user setup.
 
-Example future event types cover location, inventory delta, purse delta, active objective progress, chat-derived SkyBlock signals, and terminal passthrough/session events:
+Supported future `source.kind: "minecraft-mod"` event types are `minecraft.location_update`, `minecraft.inventory_delta`, `minecraft.objective_progress`, `minecraft.chat_signal`, `minecraft.terminal_session`, and generic `minecraft.telemetry`. Every Minecraft-mod event must include `payload.sessionId`. Type-specific payloads must include `location`, `inventoryDelta`, `objectiveProgress`, `signal`, or `terminal` respectively; generic telemetry must include at least one additional telemetry field. Example future event types cover location, inventory delta, purse delta, active objective progress, chat-derived SkyBlock signals, and terminal passthrough/session events:
 
 ```json
 {
@@ -186,6 +190,7 @@ Example future event types cover location, inventory delta, purse delta, active 
   "type": "minecraft.inventory_delta",
   "source": { "kind": "minecraft-mod", "id": "skyagent-fabric", "transport": "localhost" },
   "payload": {
+    "sessionId": "local-session-id",
     "inventoryDelta": [
       { "itemId": "ENCHANTED_HARD_STONE", "displayName": "Enchanted Hard Stone", "countDelta": 8 },
       { "itemId": "ENCHANTED_DIAMOND", "displayName": "Enchanted Diamond", "countDelta": -1 }
@@ -201,6 +206,7 @@ Example future event types cover location, inventory delta, purse delta, active 
   "type": "minecraft.objective_progress",
   "source": { "kind": "minecraft-mod", "id": "skyagent-fabric", "transport": "localhost" },
   "payload": {
+    "sessionId": "local-session-id",
     "objectiveProgress": {
       "objectiveId": "obj_hotm_route",
       "taskId": "task_powder_grind",
@@ -218,6 +224,7 @@ Example future event types cover location, inventory delta, purse delta, active 
   "type": "minecraft.chat_signal",
   "source": { "kind": "minecraft-mod", "id": "skyagent-fabric", "transport": "localhost" },
   "payload": {
+    "sessionId": "local-session-id",
     "signal": "skyblock_drop_or_completion",
     "chatDerived": true,
     "rawTextRedacted": true,
@@ -232,6 +239,7 @@ Example future event types cover location, inventory delta, purse delta, active 
   "type": "minecraft.terminal_session",
   "source": { "kind": "minecraft-mod", "id": "skyagent-fabric", "transport": "localhost" },
   "payload": {
+    "sessionId": "local-session-id",
     "terminal": {
       "sessionId": "local-terminal-session",
       "event": "opened",

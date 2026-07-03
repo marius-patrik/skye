@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createGateway, GatewayClient, gatewayVersion, startGateway } from "../src/index.ts";
 import { systemPrompt } from "../src/agent.ts";
+import { contextEventBus } from "@skyagent/core/context-events";
 import fs from "node:fs";
 import net from "node:net";
 import os from "node:os";
@@ -414,6 +415,47 @@ test("server status and context event routes expose JSON and SSE contracts", asy
   const first = await reader.read();
   await reader.cancel();
   expect(new TextDecoder().decode(first.value)).toContain("event: gateway.test");
+});
+
+test("default context event route persists explicit events for reconnect reads", async () => {
+  const previousHome = process.env.SKYAGENT_HOME;
+  const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), "skyagent-gateway-events-"));
+  process.env.SKYAGENT_HOME = tempHome;
+  contextEventBus.clear();
+  try {
+    const gateway = createGateway({ token: "test-token" });
+    const emitted = await gateway.handle(request("/context/events", "test-token", {
+      method: "POST",
+      body: JSON.stringify({ type: "gateway.persisted_test", payload: { ok: true } }),
+    })).then((response) => response.json());
+
+    contextEventBus.clear();
+    const freshGateway = createGateway({ token: "test-token" });
+    const read = await freshGateway.handle(request(`/context/events?since=${emitted.event.sequence - 1}&limit=5`, "test-token"))
+      .then((response) => response.json());
+    expect(read.events.events).toContainEqual(expect.objectContaining({
+      id: emitted.event.id,
+      type: "gateway.persisted_test",
+    }));
+
+    const invalid = await freshGateway.handle(request("/context/events", "test-token", {
+      method: "POST",
+      body: JSON.stringify({
+        type: "minecraft.inventory_delta",
+        source: { kind: "minecraft-mod" },
+        payload: { sessionId: "session-1" },
+      }),
+    }));
+    expect(invalid.status).toBe(400);
+  } finally {
+    contextEventBus.clear();
+    if (previousHome === undefined) {
+      delete process.env.SKYAGENT_HOME;
+    } else {
+      process.env.SKYAGENT_HOME = previousHome;
+    }
+    fs.rmSync(tempHome, { recursive: true, force: true });
+  }
 });
 
 test("persistent agent routes start sessions, stream through LiteLLM, and wrap objectives", async () => {

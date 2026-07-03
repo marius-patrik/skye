@@ -859,8 +859,8 @@ export async function callTool(name: string, args: Record<string, any> = {}) {
       return readContextEvents(args);
     }
     case "skyagent_context_event_emit": {
-      const { emitContextEvent } = await import("@skyagent/core/context-events");
-      return emitContextEvent({
+      const { persistContextEvent } = await import("@skyagent/core/context-events");
+      return persistContextEvent({
         type: args.type ?? "mcp.context_event",
         source: args.source ?? { kind: "mcp", transport: "tool" },
         player: args.player,

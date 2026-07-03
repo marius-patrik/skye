@@ -25,6 +25,7 @@ import {
   publicLlmProviderConfig,
   providerStatus,
   publicConfig,
+  persistContextEvent,
   readContextEvents,
   readinessForPlayer,
   resourceEndpoint,
@@ -138,7 +139,7 @@ const defaultDeps: GatewayDeps = {
   agentContextForPlayer,
   serverStatusForPlayer,
   readContextEvents,
-  emitContextEvent,
+  emitContextEvent: persistContextEvent,
   emitProviderStatusEvent,
   subscribeContextEvents,
   startSkyAgentSession,
@@ -334,14 +335,18 @@ export function createGateway(options: GatewayOptions = {}) {
 
       if (url.pathname === "/context/events" && request.method === "POST") {
         const body = await parseJsonBody(request);
-        return json({ ok: true, event: deps.emitContextEvent({
-          type: body.type ?? "gateway.context_event",
-          source: body.source ?? { kind: "gateway", transport: "http" },
-          player: body.player,
-          profile: body.profile,
-          payload: body.payload ?? {},
-          freshness: { status: "local", source: "gateway" },
-        }) });
+        try {
+          return json({ ok: true, event: deps.emitContextEvent({
+            type: body.type ?? "gateway.context_event",
+            source: body.source ?? { kind: "gateway", transport: "http" },
+            player: body.player,
+            profile: body.profile,
+            payload: body.payload ?? {},
+            freshness: { status: "local", source: "gateway" },
+          }) });
+        } catch (error) {
+          return errorResponse(400, "invalid_context_event", error instanceof Error ? error.message : String(error));
+        }
       }
 
       if (url.pathname === "/context/stream" && request.method === "GET") {

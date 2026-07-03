@@ -73,6 +73,16 @@ export type ServerStatus = {
 let nextSequence = 1;
 const lastServerStatusSignatures = new Map<string, string>();
 let lastProviderStatusSignature: string | null = null;
+const liveReadSequenceAssignments = new Map<string, number>();
+const REDACTED_SECRET_STATUS_KEYS = new Set(["apiKeyConfigured", "apiKeySource", "authSource"]);
+const MINECRAFT_EVENT_TYPES = new Set([
+  "minecraft.location_update",
+  "minecraft.inventory_delta",
+  "minecraft.objective_progress",
+  "minecraft.chat_signal",
+  "minecraft.terminal_session",
+  "minecraft.telemetry",
+]);
 
 function nowIso(now = Date.now()) {
   return new Date(now).toISOString();
@@ -90,7 +100,90 @@ function eventId(sequence: number) {
   return `ctx-${sequence.toString(36).padStart(6, "0")}`;
 }
 
+function eventMergeKey(event: ContextEvent) {
+  return `${event.id}\u0000${event.sequence}\u0000${event.type}\u0000${event.timestamp}\u0000${event.source.kind}\u0000${event.source.id ?? ""}`;
+}
+
+function liveReadAssignmentKey(event: ContextEvent) {
+  return `${event.type}\u0000${event.timestamp}\u0000${event.source.kind}\u0000${event.source.id ?? ""}\u0000${event.source.transport ?? ""}\u0000${JSON.stringify(event.payload ?? null)}`;
+}
+
+function normalizeSinceSequence(options: Record<string, any> = {}) {
+  const since = Number(options.sinceSequence ?? options.since ?? 0);
+  return Number.isFinite(since) ? Math.max(0, since) : 0;
+}
+
+function isRawSecretScalarKey(key: string) {
+  if (REDACTED_SECRET_STATUS_KEYS.has(key)) return false;
+  const normalized = key.replace(/[-_\s]/g, "").toLowerCase();
+  return normalized === "apikey"
+    || normalized === "token"
+    || normalized.endsWith("token")
+    || normalized.includes("secret")
+    || normalized === "password"
+    || normalized.includes("authorization")
+    || normalized === "bearer";
+}
+
+function assertNoSecretKeys(value: any, path = "payload") {
+  if (!value || typeof value !== "object") {
+    return;
+  }
+  for (const [key, nested] of Object.entries(value)) {
+    const currentPath = `${path}.${key}`;
+    if (isRawSecretScalarKey(key)) {
+      throw new Error(`Context event payload contains disallowed secret-like field: ${currentPath}`);
+    }
+    assertNoSecretKeys(nested, currentPath);
+  }
+}
+
+function normalizeMinecraftModPayload(type: string, payload: Record<string, any>) {
+  if (!MINECRAFT_EVENT_TYPES.has(type)) {
+    throw new Error(`Unsupported minecraft-mod context event type: ${type}`);
+  }
+  if (typeof payload.sessionId !== "string" || payload.sessionId.length === 0) {
+    throw new Error("minecraft-mod context events require payload.sessionId.");
+  }
+  if (type === "minecraft.location_update" && !payload.location) {
+    throw new Error("minecraft.location_update requires payload.location.");
+  }
+  if (type === "minecraft.inventory_delta" && !Array.isArray(payload.inventoryDelta)) {
+    throw new Error("minecraft.inventory_delta requires payload.inventoryDelta.");
+  }
+  if (type === "minecraft.objective_progress" && !payload.objectiveProgress) {
+    throw new Error("minecraft.objective_progress requires payload.objectiveProgress.");
+  }
+  if (type === "minecraft.chat_signal" && !payload.signal) {
+    throw new Error("minecraft.chat_signal requires payload.signal.");
+  }
+  if (type === "minecraft.terminal_session" && !payload.terminal) {
+    throw new Error("minecraft.terminal_session requires payload.terminal.");
+  }
+  if (type === "minecraft.telemetry" && Object.keys(payload).length <= 1) {
+    throw new Error("minecraft.telemetry requires at least one telemetry field besides payload.sessionId.");
+  }
+  return payload;
+}
+
+function validateContextEventInput(input: Record<string, any>) {
+  const sourceKind = input.source?.kind ?? input.source ?? "agent";
+  const payload = input.payload ?? {};
+  assertNoSecretKeys(payload);
+  if (sourceKind === "minecraft-mod") {
+    if (input.source?.transport !== "localhost") {
+      throw new Error('minecraft-mod context events require source.transport "localhost".');
+    }
+    if (typeof input.source?.id !== "string" || input.source.id.length === 0) {
+      throw new Error("minecraft-mod context events require source.id.");
+    }
+    normalizeMinecraftModPayload(input.type ?? "context.note", payload);
+  }
+  return { sourceKind, payload };
+}
+
 export function normalizeContextEvent(input: Record<string, any>, options: Record<string, any> = {}): ContextEvent {
+  const validation = validateContextEventInput(input);
   const sequence = options.sequence ?? nextSequence++;
   const timestamp = input.timestamp ?? nowIso(options.now);
   return {
@@ -100,14 +193,14 @@ export function normalizeContextEvent(input: Record<string, any>, options: Recor
     sequence,
     type: input.type ?? "context.note",
     source: {
-      kind: input.source?.kind ?? input.source ?? "agent",
+      kind: validation.sourceKind,
       id: input.source?.id ?? null,
       transport: input.source?.transport ?? null,
     },
     timestamp,
     player: input.player ?? null,
     profile: input.profile ?? null,
-    payload: input.payload ?? {},
+    payload: validation.payload,
     freshness: {
       status: input.freshness?.status ?? "unknown",
       fetchedAt: input.freshness?.fetchedAt ?? timestamp,
@@ -158,7 +251,7 @@ export class ContextEventBus {
   }
 
   read(options: Record<string, any> = {}): ContextEventBatch {
-    const since = Number(options.sinceSequence ?? options.since ?? 0);
+    const since = normalizeSinceSequence(options);
     const parsedLimit = Number(options.limit ?? this.historyLimit);
     const limit = Number.isFinite(parsedLimit) ? Math.max(0, parsedLimit) : this.historyLimit;
     const type = options.type ?? null;
@@ -170,7 +263,7 @@ export class ContextEventBus {
       kind: "skyagent.contextEventBatch",
       schemaVersion: 1,
       generatedAt: nowIso(options.now),
-      sinceSequence: Number.isFinite(since) ? since : 0,
+      sinceSequence: since,
       latestSequence: this.history.at(-1)?.sequence ?? 0,
       limit,
       events,
@@ -185,6 +278,7 @@ export class ContextEventBus {
   clear() {
     this.history = [];
     this.listeners.clear();
+    liveReadSequenceAssignments.clear();
   }
 }
 
@@ -195,11 +289,18 @@ export function contextEventLogPath(options: Record<string, any> = {}) {
 function readPersistedEvents(options: Record<string, any> = {}) {
   const file = contextEventLogPath(options);
   try {
+    let previousSequence = 0;
     return fs.readFileSync(file, "utf8")
       .split(/\r?\n/)
       .filter(Boolean)
       .map((line) => JSON.parse(line) as ContextEvent)
-      .filter((event) => event?.kind === "skyagent.contextEvent");
+      .filter((event) => event?.kind === "skyagent.contextEvent")
+      .map((event) => {
+        const storedSequence = Number(event.sequence);
+        const sequence = Number.isFinite(storedSequence) && storedSequence > previousSequence ? storedSequence : previousSequence + 1;
+        previousSequence = sequence;
+        return { ...event, id: eventId(sequence), sequence };
+      });
   } catch (error) {
     if ((error as any)?.code === "ENOENT") {
       return [];
@@ -210,7 +311,7 @@ function readPersistedEvents(options: Record<string, any> = {}) {
 
 export function readPersistedContextEvents(options: Record<string, any> = {}) {
   const persisted = readPersistedEvents(options);
-  const since = Number(options.sinceSequence ?? options.since ?? 0);
+  const since = normalizeSinceSequence(options);
   const parsedLimit = Number(options.limit ?? DEFAULT_CONTEXT_EVENT_HISTORY_LIMIT);
   const limit = Number.isFinite(parsedLimit) ? Math.max(0, parsedLimit) : DEFAULT_CONTEXT_EVENT_HISTORY_LIMIT;
   const type = options.type ?? null;
@@ -222,15 +323,41 @@ export function readPersistedContextEvents(options: Record<string, any> = {}) {
     kind: "skyagent.contextEventBatch",
     schemaVersion: 1,
     generatedAt: nowIso(options.now),
-    sinceSequence: Number.isFinite(since) ? since : 0,
+    sinceSequence: since,
     latestSequence: persisted.at(-1)?.sequence ?? 0,
     limit,
     events,
   };
 }
 
+function maxPersistedSequence(options: Record<string, any> = {}) {
+  return Math.max(0, ...readPersistedEvents(options).map((event) => event.sequence));
+}
+
+function ensureNextSequenceAfterPersisted(options: Record<string, any> = {}) {
+  nextSequence = Math.max(nextSequence, maxPersistedSequence(options) + 1);
+}
+
 function nextPersistedSequence(options: Record<string, any> = {}) {
-  return Math.max(0, ...readPersistedEvents(options).map((event) => event.sequence)) + 1;
+  return maxPersistedSequence(options) + 1;
+}
+
+function mergeLiveEventsAfterPersisted(persistedEvents: ContextEvent[], liveEvents: ContextEvent[]) {
+  let previousSequence = Math.max(0, ...persistedEvents.map((event) => event.sequence));
+  return liveEvents
+    .sort((a, b) => a.sequence - b.sequence)
+    .map((event) => {
+      const assignmentKey = liveReadAssignmentKey(event);
+      const existingSequence = liveReadSequenceAssignments.get(assignmentKey);
+      const sequence = existingSequence !== undefined && existingSequence > previousSequence
+        ? existingSequence
+        : event.sequence > previousSequence ? event.sequence : previousSequence + 1;
+      if (existingSequence !== sequence) {
+        liveReadSequenceAssignments.set(assignmentKey, sequence);
+      }
+      previousSequence = Math.max(previousSequence, sequence);
+      return sequence === event.sequence ? event : { ...event, id: eventId(sequence), sequence };
+    });
 }
 
 export function persistContextEvent(input: Record<string, any>, options: Record<string, any> = {}) {
@@ -243,11 +370,39 @@ export function persistContextEvent(input: Record<string, any>, options: Record<
 export const contextEventBus = new ContextEventBus();
 
 export function emitContextEvent(input: Record<string, any>) {
+  ensureNextSequenceAfterPersisted();
   return contextEventBus.emit(input);
 }
 
 export function readContextEvents(options: Record<string, any> = {}) {
-  return contextEventBus.read(options);
+  const persistedEvents = readPersistedEvents(options);
+  const persistedKeys = new Set(persistedEvents.map(eventMergeKey));
+  const live = contextEventBus.read({ ...options, sinceSequence: 0, limit: DEFAULT_CONTEXT_EVENT_HISTORY_LIMIT });
+  const liveEvents = live.events
+    .filter((event) => !persistedKeys.has(eventMergeKey(event)));
+  const mergedLiveEvents = mergeLiveEventsAfterPersisted(persistedEvents, liveEvents);
+  const byEvent = new Map<string, ContextEvent>();
+  for (const event of [...persistedEvents, ...mergedLiveEvents]) {
+    byEvent.set(eventMergeKey(event), event);
+  }
+  const since = normalizeSinceSequence(options);
+  const parsedLimit = Number(options.limit ?? DEFAULT_CONTEXT_EVENT_HISTORY_LIMIT);
+  const limit = Number.isFinite(parsedLimit) ? Math.max(0, parsedLimit) : DEFAULT_CONTEXT_EVENT_HISTORY_LIMIT;
+  const type = options.type ?? null;
+  const matchingEvents = [...byEvent.values()]
+    .filter((event) => event.sequence > since)
+    .filter((event) => !type || event.type === type)
+    .sort((a, b) => a.sequence - b.sequence);
+  const events = limit === 0 ? [] : matchingEvents.slice(-limit);
+  return {
+    kind: "skyagent.contextEventBatch",
+    schemaVersion: 1,
+    generatedAt: nowIso(options.now),
+    sinceSequence: since,
+    latestSequence: Math.max(...persistedEvents.map((event) => event.sequence), ...mergedLiveEvents.map((event) => event.sequence), 0),
+    limit,
+    events,
+  };
 }
 
 export function subscribeContextEvents(listener: (event: ContextEvent) => void) {

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, test } from "bun:test";
+import { contextEventBus } from "@skyagent/core/context-events";
 import { buildProfileSnapshot, writeProfileSnapshot } from "@skyagent/core/profile-cache";
 import { callTool, tools } from "../src/tools.ts";
 
@@ -245,6 +246,7 @@ test("start MCP tool returns cached context and persists a session event", async
   const batch = await callTool("skyagent_context_watch", {
     sinceSequence: result.sessionEvent.sequence - 1,
     limit: 5,
+    type: "agent.session_start",
   });
 
   expect(result.kind).toBe("skyagent.startup");
@@ -261,10 +263,12 @@ test("start MCP tool returns cached context and persists a session event", async
 });
 
 test("context event MCP tools emit and read events", async () => {
+  isolatedSkyAgentHome();
   const event = await callTool("skyagent_context_event_emit", {
     type: "mcp.test_event",
     payload: { ok: true },
   });
+  contextEventBus.clear();
   const batch = await callTool("skyagent_context_watch", {
     sinceSequence: event.sequence - 1,
     limit: 5,
